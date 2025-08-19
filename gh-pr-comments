@@ -1,35 +1,81 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Hello gh-pr-comments!"
+show_help() {
+  cat <<EOF
+Usage: gh pr-comments [options] [<org/repo> <pr_number>]
 
-# Snippets to help get started:
+Get PR review comments in markdown format
 
-# Determine if an executable is in the PATH
-# if ! type -p ruby >/dev/null; then
-#   echo "Ruby not found on the system" >&2
-#   exit 1
-# fi
+OPTIONS:
+    -h, --help          Show this help
+    -f, --format FORMAT Output format (markdown, simple) [default: markdown]
 
-# Pass arguments through to another command
-# gh issue list "$@" -R cli/cli
+EXAMPLES:
+    gh pr-comments                    # Use current PR
+    gh pr-comments PrinterLogic/vac 3192
+    gh pr-comments --format simple    # Simpler output format
+EOF
+}
 
-# Using the gh api command to retrieve and format information
-# QUERY='
-#   query($endCursor: String) {
-#     viewer {
-#       repositories(first: 100, after: $endCursor) {
-#         nodes {
-#           nameWithOwner
-#           stargazerCount
-#         }
-#       }
-#     }
-#   }
-# '
-# TEMPLATE='
-#   {{- range $repo := .data.viewer.repositories.nodes -}}
-#     {{- printf "name: %s - stargazers: %v\n" $repo.nameWithOwner $repo.stargazerCount -}}
-#   {{- end -}}
-# '
-# exec gh api graphql -f query="${QUERY}" --paginate --template="${TEMPLATE}"
+format="markdown"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -h | --help)
+    show_help
+    exit 0
+    ;;
+  -f | --format)
+    format="$2"
+    shift 2
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+gh_pr_comments() {
+  local repo pr_number
+
+  if [ $# -eq 0 ]; then
+    # No arguments - try to get current PR info
+    local pr_info
+    pr_info=$(gh pr view --json number,headRepository,headRepositoryOwner 2>/dev/null)
+    if [ $? -ne 0 ]; then
+      echo "Error: Not in a git repo with an active PR, or no PR found."
+      echo "Usage: gh pr-comments [<org/repo> <pr_number>]"
+      return 1
+    fi
+
+    pr_number=$(echo "$pr_info" | jq -r '.number')
+    local owner=$(echo "$pr_info" | jq -r '.headRepositoryOwner.login')
+    local repo_name=$(echo "$pr_info" | jq -r '.headRepository.name')
+    repo="${owner}/${repo_name}"
+
+  elif [ $# -eq 2 ]; then
+    # Two arguments provided
+    repo="$1"
+    pr_number="$2"
+
+  else
+    echo "Usage: gh pr-comments [<org/repo> <pr_number>]"
+    echo "Examples:"
+    echo "  gh pr-comments                    # Use current PR"
+    echo "  gh pr-comments PrinterLogic/vac 3192"
+    return 1
+  fi
+
+  echo "# PR Comments for $repo #$pr_number"
+  echo ""
+
+  gh api "repos/$repo/pulls/$pr_number/comments" | jq -r '.[] | "## Line \(.line // "N/A") - @\(.user.login)\n\n\(.body)\n\n---\n"'
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to fetch comments. Please check the repository name and PR number."
+    return 1
+  fi
+}
+
+gh_pr_comments "$@"
