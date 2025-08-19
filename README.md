@@ -29,7 +29,7 @@ options:
 
 examples:
 - `gh pr-comments`                             # uses current PR in repo
-- `gh pr-comments PrinterLogic/vac 3192`       # fetch for specific repo/pr
+- `gh pr-comments cli/cli 3192`       # fetch for specific repo/pr
 - `gh pr-comments --format simple`             # compact/simple output
 
 ## output
