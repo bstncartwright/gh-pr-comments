@@ -13,7 +13,7 @@ OPTIONS:
 
 EXAMPLES:
     gh pr-comments                    # Use current PR
-    gh pr-comments PrinterLogic/vac 3192
+    gh pr-comments cli/cli 3192
     gh pr-comments --format simple    # Simpler output format
 EOF
 }
@@ -63,7 +63,7 @@ gh_pr_comments() {
     echo "Usage: gh pr-comments [<org/repo> <pr_number>]"
     echo "Examples:"
     echo "  gh pr-comments                    # Use current PR"
-    echo "  gh pr-comments PrinterLogic/vac 3192"
+    echo "  gh pr-comments cli/cli 3192"
     return 1
   fi
 
